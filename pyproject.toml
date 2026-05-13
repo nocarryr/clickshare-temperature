@@ -39,6 +39,9 @@ packages = ["clickshare_temperature"]
 [tool.ruff]
 include = ["pyproject.toml", "src/**/*.py"]
 
+[tool.pytest]
+testpaths = ["tests"]
+
 
 [dependency-groups]
 dev = [
