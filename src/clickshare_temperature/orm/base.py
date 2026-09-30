@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from typing import Any, ClassVar, Self
 
 import sqlalchemy
-from sqlalchemy import Float, Select, String, inspect, select
+from sqlalchemy import Float, String, inspect, select
 from sqlalchemy.orm import (
     DeclarativeBase,
     Session,
@@ -15,7 +15,12 @@ from sqlalchemy.orm import (
 from sqlalchemy_utc import UtcDateTime
 
 from ..types import LogLevel, SensorType
-from .types import DeserializationError, FullySerializedModelTD, _BaseModelSerializeTD
+from .types import (
+    DeserializationError,
+    FullySerializedModelTD,
+    SelectOf,
+    _BaseModelSerializeTD,
+)
 
 
 class Base[NaturalKeyType, SerializeType: (_BaseModelSerializeTD[Any])](DeclarativeBase):
@@ -39,7 +44,7 @@ class Base[NaturalKeyType, SerializeType: (_BaseModelSerializeTD[Any])](Declarat
 
     @classmethod
     @abstractmethod
-    def select_by_natural_key(cls, key: NaturalKeyType) -> Select[tuple[Self]]:
+    def select_by_natural_key(cls, key: NaturalKeyType) -> SelectOf[Self]:
         """Get a select statement to retrieve a model instance by its natural key
         """
         raise NotImplementedError

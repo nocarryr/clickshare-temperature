@@ -15,7 +15,6 @@ import click_extra
 from aiohttp import ClientError, ClientSession
 from sqlalchemy import and_, create_mock_engine, or_, select
 from sqlalchemy.orm import Session
-from sqlalchemy.sql.expression import Select
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.mock import MockConnection
@@ -68,6 +67,7 @@ from .models import (
     SensorReading,
 )
 from .serialization import deserialize_database, serialize_database
+from .types import SelectOf
 from .utils import get_count_for_select
 
 
@@ -855,7 +855,7 @@ def get_online_statuses_for_influx_backfill(
     session: Session,
     time_series_window: datetime.timedelta = datetime.timedelta(hours=1),
     now: datetime.datetime|None = None,
-) -> Select[tuple[BaseUnitOnlineStatus]]:
+) -> SelectOf[BaseUnitOnlineStatus]:
     """Build a select statement containing BaseUnitOnlineStatus rows requiring Influx backfill
 
     Selection includes either:
@@ -1022,7 +1022,7 @@ def backfill_influx(
         upload_power_management_statuses,
     )
 
-    def iter_select_chunks[T](select: Select[tuple[T]], chunk_size: int) -> Iterator[Select[tuple[T]]]:
+    def iter_select_chunks[T](select: SelectOf[T], chunk_size: int) -> Iterator[SelectOf[T]]:
         """Generic iterator to yield chunks of a SQLAlchemy select statement
 
         Assumes each yielded chunk is excluded from ``select`` (e.g. via an
@@ -1069,7 +1069,7 @@ def backfill_influx(
             fg="blue",
         )
 
-        def inner_backfill(sensor_select: Select[tuple[SensorReading]]) -> int:
+        def inner_backfill(sensor_select: SelectOf[SensorReading]) -> int:
             """Inner function to backfill a chunk of sensor readings"""
             temperature_history = base_unit.to_temperature_history_data(
                 session,
@@ -1161,7 +1161,7 @@ def backfill_influx(
             f"Backfilling and uploading {statuses_count} {model_cls.__name__} entries...",
             fg="blue",
         )
-        def backfill_inner(status_select: Select[tuple[T]]) -> None:
+        def backfill_inner(status_select: SelectOf[T]) -> None:
             """Inner function to backfill a chunk of statuses"""
             statuses = session.execute(status_select).scalars().all()
             upload_baseunit_status(
@@ -1203,7 +1203,7 @@ def backfill_influx(
             fg="blue",
         )
 
-        def backfill_inner(power_status_select: Select[tuple[PowerManagementStatus]]) -> None:
+        def backfill_inner(power_status_select: SelectOf[PowerManagementStatus]) -> None:
             """Inner function to backfill a chunk of PowerManagementStatus entries"""
             power_statuses = session.execute(power_status_select).scalars().all()
             if len(power_statuses) == 0:
