@@ -22,7 +22,7 @@ clickshare-temperature = "clickshare_temperature:main"
 
 [project.optional-dependencies]
 orm = [
-    "sqlalchemy>=2.0.49",
+    "sqlalchemy>=2.1.1",
     "sqlalchemy-utc>=0.14.0",
 ]
 influx = [

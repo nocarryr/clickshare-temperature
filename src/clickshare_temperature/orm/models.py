@@ -14,7 +14,6 @@ from sqlalchemy.orm import (
     relationship,
 )
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.sql.expression import CompoundSelect, Select
 
 from .. import timezone
 from ..baseunit_api import DEFAULT_REQUEST_OPTIONS
@@ -47,9 +46,11 @@ from ..types import (
 from ..utils import click_secho
 from .base import Base
 from .types import (
+    CompoundSelectOf,
     LocationSiblingType,
     Ordering,
     RelationshipNaturalKey,
+    SelectOf,
     _BaseModelSerializeTD,
 )
 from .utils import get_count_for_select
@@ -176,7 +177,7 @@ class LocationType(Base[LocationTypeNaturalKey, _LocationTypeSerializeTD]):
         return self.name
 
     @classmethod
-    def select_by_natural_key(cls, key: LocationTypeNaturalKey) -> Select[tuple[Self]]:
+    def select_by_natural_key(cls, key: LocationTypeNaturalKey) -> SelectOf[Self]:
         """Get a select statement to retrieve a model instance by its natural key
         """
         return select(cls).where(cls.name == key)
@@ -451,7 +452,7 @@ class Location(Base[LocationNaturalKey, _LocationSerializeTD]):
         return parent_location
 
     @classmethod
-    def select_root_locations(cls) -> Select[tuple[Self]]:
+    def select_root_locations(cls) -> SelectOf[Self]:
         """Get a select statement for all root locations (i.e. locations with
         no parent location)
         """
@@ -507,7 +508,7 @@ class Location(Base[LocationNaturalKey, _LocationSerializeTD]):
         last_sibling = self.parent_location.child_locations[-1]
         return self.id == last_sibling.id
 
-    def select_siblings(self) -> Select[tuple[Self]]:
+    def select_siblings(self) -> SelectOf[Self]:
         """Get a select statement for all siblings of this Location, including itself
         """
         if self.parent_location is None:
@@ -520,7 +521,7 @@ class Location(Base[LocationNaturalKey, _LocationSerializeTD]):
         """
         return get_count_for_select(self.select_siblings(), session=session)
 
-    def select_ancestors(self) -> Select[tuple[Self]]:
+    def select_ancestors(self) -> SelectOf[Self]:
         """Get a select statement for all ancestor Locations of this Location,
         starting with the parent location and ending with the top-level parent location
         """
@@ -535,7 +536,7 @@ class Location(Base[LocationNaturalKey, _LocationSerializeTD]):
         cte_stmt = cte.union_all(recursive_q)
         return select(cls).join(cte_stmt, cls.id == cte_stmt.c.id)
 
-    def select_descendants(self) -> Select[tuple[Location]]:
+    def select_descendants(self) -> SelectOf[Location]:
         """Get a select statement for all descendant Locations of this Location in depth-first order
         """
         cls = Location
@@ -549,7 +550,7 @@ class Location(Base[LocationNaturalKey, _LocationSerializeTD]):
         cte_stmt = cte.union_all(recursive_q)
         return select(cls).join(cte_stmt, cls.id == cte_stmt.c.id)
 
-    def select_base_units(self, include_descendants: bool = False) -> Select[tuple[BaseUnit]]:
+    def select_base_units(self, include_descendants: bool = False) -> SelectOf[BaseUnit]:
         """Get a select statement for all BaseUnits at this Location and optionally at all
         descendant Locations
 
@@ -561,7 +562,7 @@ class Location(Base[LocationNaturalKey, _LocationSerializeTD]):
                 optionally at descendant Locations
         """
         base_q = select(Location.id).where(Location.id == self.id)
-        location_ids_q: Select[tuple[int]] | CompoundSelect[tuple[int]]
+        location_ids_q: SelectOf[int] | CompoundSelectOf[int]
         if include_descendants:
             descendant_ids_q = self.select_descendants().with_only_columns(Location.id)
             location_ids_q = base_q.union_all(descendant_ids_q)
@@ -591,7 +592,7 @@ class Location(Base[LocationNaturalKey, _LocationSerializeTD]):
         return self.pathlist
 
     @classmethod
-    def select_by_natural_key(cls, key: LocationNaturalKey) -> Select[tuple[Self]]:
+    def select_by_natural_key(cls, key: LocationNaturalKey) -> SelectOf[Self]:
         """Get a select statement to retrieve a model instance by its natural key
         """
         path_iter = iter(key)
@@ -748,7 +749,7 @@ class BaseUnit(Base[BaseUnitNaturalKey, _BaseUnitSerializeTD]):
         return self.hostname
 
     @classmethod
-    def select_by_natural_key(cls, key: BaseUnitNaturalKey) -> Select[tuple[Self]]:
+    def select_by_natural_key(cls, key: BaseUnitNaturalKey) -> SelectOf[Self]:
         """Get a select statement to retrieve a model instance by its natural key
         """
         return select(cls).where(cls.hostname == key)
@@ -1006,7 +1007,7 @@ class BaseUnit(Base[BaseUnitNaturalKey, _BaseUnitSerializeTD]):
         self,
         sensor_type: SensorType|None = None,
         order_by: Ordering|None = None
-    ) -> Select[tuple[SensorReading]]:
+    ) -> SelectOf[SensorReading]:
         """Get a select statement for sensor readings for this BaseUnit, optionally filtered by sensor type
         """
         stmt = select(SensorReading).where(SensorReading.base_unit_id == self.id)
@@ -1021,7 +1022,7 @@ class BaseUnit(Base[BaseUnitNaturalKey, _BaseUnitSerializeTD]):
     def to_temperature_history_data(
         self,
         session: Session,
-        sensor_select: Select[tuple[SensorReading]]|None = None
+        sensor_select: SelectOf[SensorReading]|None = None
     ) -> TemperatureHistoryData:
         """Convert this BaseUnit and its sensor readings to a
         :class:`.temperature_history.TemperatureHistory` instance
@@ -1082,7 +1083,7 @@ class BaseUnitOnlineStatus(Base[BaseUnitOnlineStatusNaturalKey, _BaseUnitOnlineS
         )
 
     @classmethod
-    def select_by_natural_key(cls, key: BaseUnitOnlineStatusNaturalKey) -> Select[tuple[Self]]:
+    def select_by_natural_key(cls, key: BaseUnitOnlineStatusNaturalKey) -> SelectOf[Self]:
         """Get a select statement to retrieve a model instance by its natural key
         """
         base_unit_hostname, pk = key
@@ -1161,7 +1162,7 @@ class BaseUnitIdentity(Base[BaseUnitIdentityNaturalKey, _BaseUnitIdentitySeriali
         return self.base_unit.natural_key
 
     @classmethod
-    def select_by_natural_key(cls, key: BaseUnitIdentityNaturalKey) -> Select[tuple[Self]]:
+    def select_by_natural_key(cls, key: BaseUnitIdentityNaturalKey) -> SelectOf[Self]:
         """Get a select statement to retrieve a model instance by its natural key
         """
         return select(cls).join(BaseUnit).filter(
@@ -1266,7 +1267,7 @@ class PowerManagementSettings(Base[PowerManagementSettingsNaturalKey, _PowerMana
         return self.base_unit.natural_key
 
     @classmethod
-    def select_by_natural_key(cls, key: PowerManagementSettingsNaturalKey) -> Select[tuple[Self]]:
+    def select_by_natural_key(cls, key: PowerManagementSettingsNaturalKey) -> SelectOf[Self]:
         """Get a select statement to retrieve a model instance by its natural key
         """
         return select(cls).join(BaseUnit).filter(
@@ -1371,7 +1372,7 @@ class PowerManagementStatus(Base[PowerManagementStatusNaturalKey, _PowerManageme
         )
 
     @classmethod
-    def select_by_natural_key(cls, key: PowerManagementStatusNaturalKey) -> Select[tuple[Self]]:
+    def select_by_natural_key(cls, key: PowerManagementStatusNaturalKey) -> SelectOf[Self]:
         """Get a select statement to retrieve a model instance by its natural key
         """
         base_unit_key, pk = key
@@ -1525,7 +1526,7 @@ class BaseUnitStatus(Base[BaseUnitStatusNaturalKey, _BaseUnitStatusSerializeTD])
         )
 
     @classmethod
-    def select_by_natural_key(cls, key: BaseUnitStatusNaturalKey) -> Select[tuple[Self]]:
+    def select_by_natural_key(cls, key: BaseUnitStatusNaturalKey) -> SelectOf[Self]:
         """Get a select statement to retrieve a model instance by its natural key
         """
         base_unit_hostname, pk = key
@@ -1615,7 +1616,7 @@ class BaseUnitUsageStatus(Base[BaseUnitUsageStatusNaturalKey, _BaseUnitUsageStat
         )
 
     @classmethod
-    def select_by_natural_key(cls, key: BaseUnitUsageStatusNaturalKey) -> Select[tuple[Self]]:
+    def select_by_natural_key(cls, key: BaseUnitUsageStatusNaturalKey) -> SelectOf[Self]:
         """Get a select statement to retrieve a model instance by its natural key
         """
         base_unit_hostname, pk = key
@@ -1771,7 +1772,7 @@ class SensorReading(Base[SensorReadingNaturalKey, _SensorReadingSerializeTD]):
         )
 
     @classmethod
-    def select_by_natural_key(cls, key: SensorReadingNaturalKey) -> Select[tuple[Self]]:
+    def select_by_natural_key(cls, key: SensorReadingNaturalKey) -> SelectOf[Self]:
         """Get a select statement to retrieve a model instance by its natural key
         """
         base_unit_hostname, pk = key
@@ -1781,7 +1782,7 @@ class SensorReading(Base[SensorReadingNaturalKey, _SensorReadingSerializeTD]):
         )
 
     @classmethod
-    def select_by_sensor_type(cls, sensor_type: SensorType) -> Select[tuple[SensorReading]]:
+    def select_by_sensor_type(cls, sensor_type: SensorType) -> SelectOf[SensorReading]:
         """Get a select statement for SensorReadings of a specific sensor type
         """
         return select(SensorReading).where(SensorReading.sensor_type == sensor_type)

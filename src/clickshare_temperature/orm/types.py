@@ -6,6 +6,15 @@ if TYPE_CHECKING:
     from .models import ModelTableName
 
 
+from sqlalchemy.sql.expression import CompoundSelect, Select
+
+type SelectOf[T] = Select[T]
+"""Type alias for a SQLAlchemy Select object"""
+
+type CompoundSelectOf[T] = CompoundSelect[T]
+"""Type alias for a SQLAlchemy CompoundSelect object"""
+
+
 type Ordering = Literal["asc", "desc"]
 
 type LocationSiblingType = Literal["first", "middle", "last", "only"]
